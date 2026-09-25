@@ -1,0 +1,34 @@
+<ion-content [fullscreen]="true" class="auth-content">
+  <main class="auth-layout">
+    <section class="auth-story">
+      <a class="auth-brand" routerLink="/auth"><span><ion-icon name="speedometer-outline"></ion-icon></span>drivvo</a>
+      <div class="story-copy">
+        <p class="auth-eyebrow">YOUR VEHICLE, ACCOUNTED FOR</p>
+        <h1>Every mile<br>has a story.</h1>
+        <p>Keep the costs, care, and small details of every drive in one clear place.</p>
+        <div class="story-stats"><span><ion-icon name="wallet-outline"></ion-icon>Costs at a glance</span><span><ion-icon name="alarm-outline"></ion-icon>Reminders on time</span></div>
+      </div>
+      <span class="story-index">01 / YOUR GARAGE</span>
+    </section>
+    <section class="auth-form-side">
+      <div class="form-wrap">
+        <p class="form-eyebrow">PERSONAL GARAGE</p>
+        <h2>{{ mode === 'login' ? 'Welcome back' : 'Create your account' }}</h2>
+        <p class="form-intro">{{ mode === 'login' ? 'Sign in to pick up where you left off.' : 'Start keeping a better record of every mile.' }}</p>
+        @if (apiEnabled) {
+          <div class="mode-switch"><button [class.active]="mode === 'login'" (click)="mode = 'login'; error = ''">Sign in</button><button [class.active]="mode === 'register'" (click)="mode = 'register'; error = ''">Create account</button></div>
+          <form (ngSubmit)="submit()">
+            <label class="auth-label">Email address<input [(ngModel)]="email" name="email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com"></label>
+            <label class="auth-label">Password<input [(ngModel)]="password" name="password" type="password" [attr.autocomplete]="mode === 'login' ? 'current-password' : 'new-password'" required minlength="12" maxlength="200" placeholder="At least 12 characters"></label>
+            @if (error) { <p class="auth-error" role="alert">{{ error }}</p> }
+            <button class="auth-submit" type="submit" [disabled]="busy">{{ busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account' }}<ion-icon name="arrow-forward-outline"></ion-icon></button>
+          </form>
+        } @else {
+          <div class="demo-panel"><span class="demo-icon"><ion-icon name="car-sport-outline"></ion-icon></span><div><b>Preview the vehicle logbook</b><small>Explore the app with a local sample garage.</small></div><button class="auth-submit" (click)="enterDemo()">Open demo <ion-icon name="arrow-forward-outline"></ion-icon></button></div>
+        }
+        <p class="privacy-note"><ion-icon name="lock-closed-outline"></ion-icon> Your vehicle records are private to your account.</p>
+      </div>
+      <span class="form-footer">VEHICLE LOGBOOK · {{ year }}</span>
+    </section>
+  </main>
+</ion-content>

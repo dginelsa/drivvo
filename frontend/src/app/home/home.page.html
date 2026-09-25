@@ -1,0 +1,92 @@
+<ion-content [fullscreen]="true" class="app-content">
+  <div class="workspace">
+    <aside class="rail" aria-label="Main navigation">
+      <a class="brand" routerLink="/home"><span class="brand-mark"><ion-icon name="speedometer-outline"></ion-icon></span><span>drivvo</span></a>
+      <div class="rail-label">WORKSPACE</div>
+      <button class="rail-link" [class.active]="activeTab === 'history'" (click)="activeTab = 'history'"><ion-icon name="list-outline"></ion-icon>History</button>
+      <button class="rail-link" [class.active]="activeTab === 'reports'" (click)="activeTab = 'reports'"><ion-icon name="bar-chart-outline"></ion-icon>Reports</button>
+      <button class="rail-link" [class.active]="activeTab === 'reminders'" (click)="activeTab = 'reminders'"><ion-icon name="alarm-outline"></ion-icon>Reminders<span class="count">{{ visibleReminders.length }}</span></button>
+      <div class="rail-bottom"><span class="avatar">DR</span><span><b>Driver</b><small>Personal garage</small></span><ion-icon name="ellipsis-horizontal"></ion-icon></div>
+    </aside>
+    <main class="main-panel">
+      <header class="topbar">
+        <div class="mobile-brand"><span class="brand-mark"><ion-icon name="speedometer-outline"></ion-icon></span><b>drivvo</b></div>
+        <button class="vehicle-picker" (click)="vehicleModalOpen = true" aria-label="Choose vehicle"><span class="vehicle-symbol"><ion-icon name="car-sport-outline"></ion-icon></span><span class="vehicle-meta"><b>{{ selectedVehicle?.name || 'Choose vehicle' }}</b><small>{{ selectedVehicle?.year }} {{ selectedVehicle?.make }} {{ selectedVehicle?.model }} · {{ selectedVehicle?.odometer | number }} mi</small></span><ion-icon class="chevron" name="chevron-down-outline"></ion-icon></button>
+        <div class="top-actions"><span class="date-label">{{ today | date:'EEEE, MMM d' }}</span><button class="icon-button" aria-label="Search"><ion-icon name="search-outline"></ion-icon></button><button class="icon-button" aria-label="Sign out" title="Sign out" (click)="logout()"><ion-icon name="log-out-outline"></ion-icon></button><span class="avatar">DR</span></div>
+      </header>
+      @if (!isLoading) {
+      <section class="page-body">
+        @if (loadError) { <div class="load-error" role="alert">{{ loadError }}</div> }
+        <div class="page-heading"><div><p class="eyebrow">YOUR GARAGE <span class="eyebrow-dot"></span> {{ selectedVehicle?.name }}</p><h1>{{ activeTab === 'history' ? 'Vehicle activity' : activeTab === 'reports' ? 'Reports & insights' : 'Reminders' }}</h1><p class="heading-copy">{{ activeTab === 'history' ? 'Every mile, expense, and service in one place.' : activeTab === 'reports' ? 'Understand the cost and performance of your vehicle.' : 'Keep the important things from sneaking up on you.' }}</p></div><button class="primary-button desktop-add" (click)="openEntry()"><ion-icon name="add-outline"></ion-icon> Add entry</button></div>
+
+        @if (activeTab === 'history') {
+          <section class="metric-grid" aria-label="Vehicle overview">
+            <article class="metric metric-balance"><span class="metric-icon"><ion-icon name="wallet-outline"></ion-icon></span><span class="metric-label">Net this month</span><strong>{{ currency(monthlyBalance) }}</strong><small [class.negative]="monthlyBalance < 0">{{ monthlyBalance >= 0 ? 'Income is ahead of costs' : 'Costs are ahead of income' }}</small></article>
+            <article class="metric"><span class="metric-icon icon-orange"><ion-icon name="flame-outline"></ion-icon></span><span class="metric-label">Fuel this month</span><strong>{{ currency(monthlyFuelTotal) }}</strong><small>{{ fuelCount }} fill-ups logged</small></article>
+            <article class="metric"><span class="metric-icon icon-green"><ion-icon name="construct-outline"></ion-icon></span><span class="metric-label">Next reminder</span><strong class="metric-text">{{ nextReminderTitle }}</strong><small>{{ nextReminderDescription }}</small></article>
+          </section>
+          <div class="section-head"><div><h2>Recent activity</h2><p>Latest records for {{ selectedVehicle?.name }}</p></div><button class="text-button" (click)="activeTab = 'reports'">View reports <ion-icon name="arrow-forward-outline"></ion-icon></button></div>
+          <section class="activity-list" aria-label="Recent activity">
+            @for (entry of visibleEntries; track entry.id) {
+              <article class="activity-row" role="button" tabindex="0" (click)="editEntry(entry)" (keydown.enter)="editEntry(entry)" (keydown.space)="editEntry(entry)"><span class="activity-icon" [attr.data-kind]="entry.kind"><ion-icon [name]="kindIcon(entry.kind)"></ion-icon></span><div class="activity-description"><b>{{ entry.title }}</b><small>{{ entry.odometer | number }} mi <span class="muted-sep">·</span> {{ entry.note || ledger.getKindLabel(entry.kind) }}</small></div><div class="activity-value"><b [class.positive]="entry.kind === 'income'">{{ entry.kind === 'income' ? '+' : '' }}{{ currency(entry.amount) }}</b><small>{{ entry.date | date:'MMM d' }}</small></div></article>
+            } @empty {
+              <div class="empty-state"><ion-icon name="document-text-outline"></ion-icon><b>No activity yet</b><span>Add your first vehicle record to get started.</span><button class="text-button" (click)="openEntry()">Add your first entry</button></div>
+            }
+          </section>
+        }
+
+        @if (activeTab === 'reports') {
+          <section class="report-controls"><div><span class="control-label">PERIOD</span><ion-select [(ngModel)]="reportRange" interface="popover" aria-label="Report period"><ion-select-option>This year</ion-select-option><ion-select-option>Last 6 months</ion-select-option><ion-select-option>All time</ion-select-option></ion-select></div><span class="report-caption">Updated from {{ reportEntries.length }} records</span></section>
+          <section class="report-grid"><article class="report-card report-highlight"><span class="metric-label">NET BALANCE</span><strong>{{ currency(totalIncome - totalOutgoings) }}</strong><small>{{ currency(totalIncome) }} income <span>−</span> {{ currency(totalOutgoings) }} costs</small></article><article class="report-card"><span class="metric-label">TOTAL SPENT</span><strong>{{ currency(totalOutgoings) }}</strong><small>Across fuel, service, and other expenses</small></article><article class="report-card"><span class="metric-label">TOTAL INCOME</span><strong class="positive">{{ currency(totalIncome) }}</strong><small>Recorded vehicle income</small></article></section>
+          <article class="chart-panel"><div class="chart-head"><div><h2>Income and costs</h2><p>{{ reportChartCaption }}</p></div><button class="icon-button" aria-label="Chart options"><ion-icon name="ellipsis-horizontal"></ion-icon></button></div><div class="chart" role="img" aria-label="Bar chart comparing monthly fuel costs, expenses and income"><div class="chart-y"><span>High</span><span>75%</span><span>50%</span><span>25%</span><span>0</span></div><div class="chart-columns">@for (bar of bars; track bar.month) {<div class="chart-column"><div class="bar-set"><span class="bar fuel-bar" [style.height.%]="bar.fuelHeight"></span><span class="bar expense-bar" [style.height.%]="bar.expenseHeight"></span><span class="bar income-bar" [style.height.%]="bar.incomeHeight"></span></div><small>{{ bar.month }}</small></div>}</div></div><div class="legend"><span><i class="legend-fuel"></i>Fuel</span><span><i class="legend-expense"></i>Costs</span><span><i class="legend-income"></i>Income</span></div></article>
+          <div class="section-head"><div><h2>By category</h2><p>Totals for this vehicle</p></div></div><section class="category-list">@for (item of categoryTotals; track item.kind) {<div><span class="category-name"><i [attr.data-kind]="item.kind"></i>{{ item.label }}</span><b>{{ currency(item.amount) }}</b></div>}</section>
+        }
+
+        @if (activeTab === 'reminders') {
+          <div class="section-head reminder-heading"><div><h2>Upcoming</h2><p>Date and mileage-based maintenance</p></div><button class="primary-button" (click)="reminderModalOpen = true"><ion-icon name="add-outline"></ion-icon> Add reminder</button></div>
+          <section class="reminder-list">
+            @for (reminder of visibleReminders; track reminder.id) {
+              <article class="reminder-row"><button class="check-button" (click)="ledger.toggleReminder(reminder.id)" aria-label="Complete reminder"><ion-icon name="ellipse-outline"></ion-icon></button><span class="reminder-symbol"><ion-icon name="construct-outline"></ion-icon></span><div class="reminder-description"><b>{{ reminder.title }}</b><small>{{ reminder.dueDate ? (reminder.dueDate | date:'MMM d, y') : ((reminder.dueOdometer || 0) | number) + ' mi' }}</small></div><span class="due-label">{{ reminderDue(reminder) }}</span></article>
+            } @empty {
+              <div class="empty-state"><ion-icon name="alarm-outline"></ion-icon><b>No reminders set</b><span>Create one for maintenance, insurance, or registration.</span></div>
+            }
+          </section>
+        }
+      </section>
+      }
+      <nav class="mobile-tabs" aria-label="Main navigation"><button [class.active]="activeTab === 'history'" (click)="activeTab = 'history'"><ion-icon name="list-outline"></ion-icon><span>History</span></button><button [class.active]="activeTab === 'reports'" (click)="activeTab = 'reports'"><ion-icon name="bar-chart-outline"></ion-icon><span>Reports</span></button><button class="tab-add" (click)="openEntry()" aria-label="Add entry"><ion-icon name="add-outline"></ion-icon></button><button [class.active]="activeTab === 'reminders'" (click)="activeTab = 'reminders'"><ion-icon name="alarm-outline"></ion-icon><span>Reminders</span></button><button (click)="vehicleModalOpen = true"><ion-icon name="car-sport-outline"></ion-icon><span>Garage</span></button></nav>
+    </main>
+  </div>
+
+  <ion-modal [isOpen]="modalOpen" (didDismiss)="modalOpen = false">
+    <ng-template>
+      <div class="modal-sheet">
+        <div class="modal-top"><span class="modal-kicker">{{ editingEntryId ? 'UPDATE VEHICLE RECORD' : 'NEW VEHICLE RECORD' }}</span><button class="icon-button" (click)="modalOpen = false" aria-label="Close"><ion-icon name="close-outline"></ion-icon></button></div>
+        <h2>{{ editingEntryId ? 'Edit entry' : 'Add an entry' }}</h2>
+        <div class="kind-picker">
+          @for (kind of entryKinds; track kind.value) {
+            <button [class.selected]="entryKind === kind.value" [attr.data-kind]="kind.value" (click)="entryKind = kind.value"><ion-icon [name]="kind.icon"></ion-icon><span>{{ kind.label }}</span></button>
+          }
+        </div>
+        <label class="field-label">Description<input [(ngModel)]="title" placeholder="e.g. Full tank, parking, oil change" maxlength="100"></label>
+        <div class="field-row"><label class="field-label">Amount ($)<input [(ngModel)]="amount" type="number" min="0.01" step="0.01" placeholder="0.00"></label><label class="field-label">Odometer (mi)<input [(ngModel)]="odometer" type="number" min="0" step="1"></label></div>
+        <div class="field-row"><label class="field-label">Date<input [(ngModel)]="date" type="date"></label><label class="field-label">Note <span>OPTIONAL</span><input [(ngModel)]="note" placeholder="Add a note" maxlength="180"></label></div>
+        @if (formError) { <p class="form-error">{{ formError }}</p> }
+        <button class="primary-button modal-submit" (click)="saveEntry()">{{ editingEntryId ? 'Save changes' : 'Save ' + ledger.getKindLabel(entryKind).toLowerCase() }}</button>
+      </div>
+    </ng-template>
+  </ion-modal>
+  <ion-modal [isOpen]="reminderModalOpen" (didDismiss)="reminderModalOpen = false"><ng-template><div class="modal-sheet"><div class="modal-top"><span class="modal-kicker">MAINTENANCE</span><button class="icon-button" (click)="reminderModalOpen = false" aria-label="Close"><ion-icon name="close-outline"></ion-icon></button></div><h2>New reminder</h2><label class="field-label">What should we remind you about?<input [(ngModel)]="reminderTitle" placeholder="e.g. Oil change, insurance" maxlength="100"></label><div class="field-row"><label class="field-label">Due date<input [(ngModel)]="reminderDate" type="date"></label><label class="field-label">Or odometer (mi)<input [(ngModel)]="reminderOdometer" type="number" min="0"></label></div><button class="primary-button modal-submit" (click)="saveReminder()">Save reminder</button></div></ng-template></ion-modal>
+  <ion-modal [isOpen]="vehicleModalOpen" (didDismiss)="vehicleModalOpen = false">
+    <ng-template>
+      <div class="modal-sheet">
+        <div class="modal-top"><span class="modal-kicker">YOUR GARAGE</span><button class="icon-button" (click)="vehicleModalOpen = false" aria-label="Close"><ion-icon name="close-outline"></ion-icon></button></div>
+        <h2>Choose a vehicle</h2>
+        @for (vehicle of ledger.vehicles; track vehicle.id) {
+          <button class="vehicle-option" (click)="selectedVehicleId = vehicle.id; vehicleModalOpen = false"><span class="vehicle-symbol"><ion-icon name="car-sport-outline"></ion-icon></span><span><b>{{ vehicle.name }}</b><small>{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} · {{ vehicle.odometer | number }} mi</small></span>@if (vehicle.id === selectedVehicleId) { <ion-icon name="checkmark-circle" class="selected-check"></ion-icon> }</button>
+        }
+        <div class="add-vehicle-form"><h3>Add a vehicle</h3><div class="field-row"><label class="field-label">Make<input [(ngModel)]="vehicleMake" placeholder="Toyota"></label><label class="field-label">Model<input [(ngModel)]="vehicleModel" placeholder="Corolla"></label></div><div class="field-row"><label class="field-label">Year<input [(ngModel)]="vehicleYear" type="number" min="1950" max="2035"></label><label class="field-label">Current odometer<input [(ngModel)]="vehicleOdometer" type="number" min="0"></label></div><button class="primary-button modal-submit" (click)="saveVehicle()">Add vehicle</button><button class="text-button logout-button" (click)="logout()"><ion-icon name="log-out-outline"></ion-icon> Sign out</button></div>
+      </div>
+    </ng-template>
+  </ion-modal>
+</ion-content>

@@ -1,0 +1,17 @@
+{
+  "name": "drivvo/vehicle-api",
+  "description": "Private vehicle logbook API",
+  "type": "project",
+  "require": {
+    "php": ">=8.2",
+    "ext-pdo": "*",
+    "ext-pdo_mysql": "*"
+  },
+  "scripts": {
+    "test": "php tests/run.php",
+    "lint": "find src public tests -name '*.php' -print0 | xargs -0 -n1 php -l"
+  },
+  "config": {
+    "sort-packages": true
+  }
+}

@@ -1,0 +1,120 @@
+name: Deploy backend to IONOS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-backend-main
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql
+          coverage: none
+      - name: Lint PHP
+        run: find backend/src backend/public backend/tests -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Run backend tests
+        run: php backend/tests/run.php
+      - name: Check schema and configuration artifacts
+        run: test -s backend/database/migrations/001_initial_schema.sql && test -s backend/.env.example
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drivvo-backend
+          path: |
+            backend/composer.json
+            backend/src/**
+            backend/public/**
+            backend/database/**
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: true
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: drivvo-backend
+          path: ${{ runner.temp }}/drivvo-backend
+      - name: Install SFTP client helper
+        run: sudo apt-get update && sudo apt-get install --yes sshpass
+      - name: Upload backend over SFTP
+        env:
+          SSHPASS: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          SFTP_HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          SFTP_PORT: ${{ secrets.IONOS_SFTP_PORT }}
+          SFTP_USERNAME: ${{ secrets.IONOS_SFTP_USERNAME }}
+          SFTP_KNOWN_HOSTS: ${{ secrets.IONOS_SFTP_KNOWN_HOSTS }}
+          IONOS_DB_HOST: ${{ secrets.IONOS_DB_HOST }}
+          IONOS_DB_PORT: ${{ secrets.IONOS_DB_PORT }}
+          IONOS_DB_NAME: ${{ secrets.IONOS_DB_NAME }}
+          IONOS_DB_USER: ${{ secrets.IONOS_DB_USER }}
+          IONOS_DB_PASSWORD: ${{ secrets.IONOS_DB_PASSWORD }}
+        run: |
+          set -eu
+          test -n "$SSHPASS"
+          test -n "$SFTP_HOST"
+          test -n "$SFTP_PORT"
+          test -n "$SFTP_USERNAME"
+          test -n "$IONOS_DB_HOST"
+          test -n "$IONOS_DB_PORT"
+          test -n "$IONOS_DB_NAME"
+          test -n "$IONOS_DB_USER"
+          test -n "$IONOS_DB_PASSWORD"
+          python3 - <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+
+          values = {
+              "DB_HOST": os.environ["IONOS_DB_HOST"],
+              "DB_PORT": os.environ["IONOS_DB_PORT"],
+              "DB_NAME": os.environ["IONOS_DB_NAME"],
+              "DB_USER": os.environ["IONOS_DB_USER"],
+              "DB_PASSWORD_B64": base64.b64encode(os.environ["IONOS_DB_PASSWORD"].encode()).decode(),
+              "FRONTEND_ORIGIN": "https://drivvo.dginelsa.net",
+              "SESSION_NAME": "drivvo_session",
+          }
+          Path(os.environ["RUNNER_TEMP"], "backend.env").write_text(
+              "".join(f"{key}={value}\n" for key, value in values.items()),
+              encoding="utf-8",
+          )
+          PY
+          chmod 600 "$RUNNER_TEMP/backend.env"
+          if [ -n "$SFTP_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SFTP_KNOWN_HOSTS" > "$RUNNER_TEMP/known_hosts"
+          else
+            ssh-keyscan -p "$SFTP_PORT" -H "$SFTP_HOST" > "$RUNNER_TEMP/known_hosts" 2>/dev/null
+          fi
+          test -s "$RUNNER_TEMP/known_hosts"
+          chmod 600 "$RUNNER_TEMP/known_hosts"
+          sshpass -e sftp -P "$SFTP_PORT" \
+            -oBatchMode=no \
+            -oStrictHostKeyChecking=yes \
+            -oUserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+            "$SFTP_USERNAME@$SFTP_HOST" <<EOF
+          cd /dginelsa/drivvo/backend
+          lcd $RUNNER_TEMP/drivvo-backend
+          put -r * .
+          put $RUNNER_TEMP/backend.env .env
+          cd public
+          lcd $RUNNER_TEMP/drivvo-backend/public
+          put -r * .
+          put .htaccess .htaccess
+          EOF

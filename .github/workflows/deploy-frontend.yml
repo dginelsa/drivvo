@@ -1,0 +1,82 @@
+name: Deploy frontend to IONOS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-frontend-main
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test -- --watch=false
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drivvo-frontend
+          path: frontend/www/
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: true
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: drivvo-frontend
+          path: ${{ runner.temp }}/drivvo-frontend
+      - name: Install SFTP client helper
+        run: sudo apt-get update && sudo apt-get install --yes sshpass
+      - name: Upload frontend over SFTP
+        env:
+          SSHPASS: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          SFTP_HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          SFTP_PORT: ${{ secrets.IONOS_SFTP_PORT }}
+          SFTP_USERNAME: ${{ secrets.IONOS_SFTP_USERNAME }}
+          SFTP_KNOWN_HOSTS: ${{ secrets.IONOS_SFTP_KNOWN_HOSTS }}
+        run: |
+          set -eu
+          test -n "$SSHPASS"
+          test -n "$SFTP_HOST"
+          test -n "$SFTP_PORT"
+          test -n "$SFTP_USERNAME"
+          if [ -n "$SFTP_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SFTP_KNOWN_HOSTS" > "$RUNNER_TEMP/known_hosts"
+          else
+            ssh-keyscan -p "$SFTP_PORT" -H "$SFTP_HOST" > "$RUNNER_TEMP/known_hosts" 2>/dev/null
+          fi
+          test -s "$RUNNER_TEMP/known_hosts"
+          chmod 600 "$RUNNER_TEMP/known_hosts"
+          sshpass -e sftp -P "$SFTP_PORT" \
+            -oBatchMode=no \
+            -oStrictHostKeyChecking=yes \
+            -oUserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+            "$SFTP_USERNAME@$SFTP_HOST" <<EOF
+          cd /dginelsa/drivvo/frontend
+          lcd $RUNNER_TEMP/drivvo-frontend
+          put -r * .
+          put .htaccess .htaccess
+          EOF
