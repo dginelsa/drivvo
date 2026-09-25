@@ -5,7 +5,7 @@
   "background_color": "#f4f6f5",
   "theme_color": "#078d91",
   "scope": "./",
-  "start_url": "./auth",
+  "start_url": "./#/auth",
   "icons": [
     {
       "src": "icons/icon-72x72.png",
