@@ -62,6 +62,12 @@ try {
     ini_set('session.use_only_cookies', '1');
     session_start();
 
+    if ($path === '/api/v1/auth/csrf' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+        $_SESSION['csrf_token'] ??= bin2hex(random_bytes(32));
+        echo json_encode(['csrfToken' => $_SESSION['csrf_token']]);
+        exit;
+    }
+
     $database = Database::connect($config);
     if ($path === '/api/v1/health/ready') {
         $database->query('SELECT 1');
