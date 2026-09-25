@@ -31,12 +31,11 @@ jobs:
       - name: Run backend tests
         run: php backend/tests/run.php
       - name: Check schema and configuration artifacts
-        run: test -s backend/database/migrations/001_initial_schema.sql && test -s backend/.env.example && test -s backend/.htaccess
+        run: test -s backend/database/migrations/001_initial_schema.sql && test -s backend/.env.example
       - uses: actions/upload-artifact@v4
         with:
           name: drivvo-backend
           path: |
-            backend/.htaccess
             backend/composer.json
             backend/src/**
             backend/public/**
@@ -111,9 +110,9 @@ jobs:
             -oUserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
             "$SFTP_USERNAME@$SFTP_HOST" <<EOF
           cd /dginelsa/drivvo/backend
+            -rm .htaccess
           lcd $RUNNER_TEMP/drivvo-backend
           put -r * .
-          put .htaccess .htaccess
           put $RUNNER_TEMP/backend.env .env
           cd public
           lcd $RUNNER_TEMP/drivvo-backend/public

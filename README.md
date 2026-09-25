@@ -41,7 +41,7 @@ find src public tests -name '*.php' -print0 | xargs -0 -n1 php -l
 ## IONOS Setup
 
 - Frontend domain: `drivvo.dginelsa.net`, document root `/dginelsa/drivvo/frontend`.
-- API domain: `drivvo-api.dginelsa.net`, preferably with document root `/dginelsa/drivvo/backend/public`. The backend root also has a locked-down rewrite for setups that use `/dginelsa/drivvo/backend`; it routes API paths to `public/index.php` and denies direct access to source, migrations, and configuration files.
+- API domain: `drivvo-api.dginelsa.net`, with document root `/dginelsa/drivvo/backend/public`. Keep the API document root on `public`; only the public directory contains the API rewrite rules.
 - Create the MariaDB schema by applying `backend/database/migrations/001_initial_schema.sql`.
 - The backend deployment workflow creates a private `backend/.env` on the server from GitHub Actions secrets. It is excluded from the build artifact and repository. The database password is base64-encoded in that private file and decoded by the PHP config loader at runtime.
 - Frontend and backend have independent workflows. They upload only their own production artifacts to their respective directories when files in their respective folders change on `main` (or on manual dispatch).
