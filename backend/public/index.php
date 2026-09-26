@@ -51,7 +51,7 @@ if ($path === '/api/v1/health') {
 try {
     $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
     session_name($config['session_name']);
-    $sessionTtl = max(0, (int) ($config['session_ttl_seconds'] ?? 31536000));
+    $sessionTtl = max(1, (int) ($config['session_ttl_seconds'] ?? 31536000));
     $sessionSavePath = trim((string) ($config['session_save_path'] ?? ''));
     if ($sessionSavePath !== '') {
         $resolvedPath = realpath($sessionSavePath);
@@ -70,10 +70,8 @@ try {
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
-    if ($sessionTtl > 0) {
-        ini_set('session.gc_maxlifetime', (string) $sessionTtl);
-        ini_set('session.cookie_lifetime', (string) $sessionTtl);
-    }
+    ini_set('session.gc_maxlifetime', (string) $sessionTtl);
+    ini_set('session.cookie_lifetime', (string) $sessionTtl);
     ini_set('session.use_strict_mode', '1');
     ini_set('session.use_only_cookies', '1');
     session_start();
