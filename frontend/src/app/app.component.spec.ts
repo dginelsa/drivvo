@@ -50,7 +50,8 @@ describe('AppComponent', () => {
   it('notifies the user and refreshes when an update is ready', async () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    const reloadSpy = vi.spyOn(app as never, 'reloadPage').mockImplementation(() => undefined);
+    const reloadSpy = vi.spyOn(app as AppComponent & { reloadPage: () => void }, 'reloadPage');
+    reloadSpy.mockImplementation(() => undefined);
 
     versionUpdates$.next({
       type: 'VERSION_READY',
