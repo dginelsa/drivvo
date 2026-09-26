@@ -23,7 +23,7 @@ export class AuthPage {
   private router = inject(Router);
 
   constructor() {
-    if (this.auth.apiEnabled || this.auth.isAuthenticated) void this.auth.checkSession().then((authenticated) => {
+    if (this.auth.isAuthenticated) void this.auth.checkSession().then((authenticated) => {
       if (authenticated) void this.router.navigateByUrl('/home');
     });
   }
