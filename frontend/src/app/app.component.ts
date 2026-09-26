@@ -48,6 +48,7 @@ export class AppComponent {
 
     await toast.present();
     await toast.onDidDismiss();
+    await this.swUpdate.activateUpdate();
     this.reloadPage();
   }
 

@@ -9,6 +9,7 @@ import { AppComponent } from './app.component';
 
 describe('AppComponent', () => {
   let versionUpdates$: Subject<VersionEvent>;
+  let swUpdate: { activateUpdate: ReturnType<typeof vi.fn>; isEnabled: boolean; versionUpdates: ReturnType<Subject<VersionEvent>['asObservable']> };
   let toastController: { create: ReturnType<typeof vi.fn> };
   let toast: {
     present: ReturnType<typeof vi.fn>;
@@ -21,6 +22,11 @@ describe('AppComponent', () => {
       present: vi.fn().mockResolvedValue(undefined),
       onDidDismiss: vi.fn().mockResolvedValue(undefined),
     };
+    swUpdate = {
+      activateUpdate: vi.fn().mockResolvedValue(undefined),
+      isEnabled: true,
+      versionUpdates: versionUpdates$.asObservable(),
+    };
     toastController = {
       create: vi.fn().mockResolvedValue(toast),
     };
@@ -28,13 +34,7 @@ describe('AppComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [AppComponent],
       providers: [
-        {
-          provide: SwUpdate,
-          useValue: {
-            isEnabled: true,
-            versionUpdates: versionUpdates$.asObservable(),
-          },
-        },
+        { provide: SwUpdate, useValue: swUpdate },
         { provide: ToastController, useValue: toastController },
       ],
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -47,7 +47,7 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it('notifies the user and refreshes when an update is ready', async () => {
+  it('notifies the user, activates the update, and refreshes when an update is ready', async () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
     const reloadSpy = vi.spyOn(app as AppComponent & { reloadPage: () => void }, 'reloadPage');
@@ -70,6 +70,7 @@ describe('AppComponent', () => {
     );
     expect(toast.present).toHaveBeenCalled();
     expect(toast.onDidDismiss).toHaveBeenCalled();
+    expect(swUpdate.activateUpdate).toHaveBeenCalled();
     expect(reloadSpy).toHaveBeenCalled();
   });
 });
