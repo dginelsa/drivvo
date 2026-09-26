@@ -18,6 +18,7 @@ describe('HomePage', () => {
     addReminder: ReturnType<typeof vi.fn>;
     toggleReminder: ReturnType<typeof vi.fn>;
   };
+  let cdrStub: { detectChanges: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -38,11 +39,13 @@ describe('HomePage', () => {
     };
     const authStub = { logout: vi.fn().mockResolvedValue(undefined), clearSession: vi.fn() };
     const routerStub = { navigateByUrl: vi.fn().mockResolvedValue(true) };
+    cdrStub = { detectChanges: vi.fn() };
     component = Object.create(HomePage.prototype) as HomePage;
     Object.assign(component, {
       ledger: ledgerStub as unknown as LedgerService,
       auth: authStub as unknown as AuthService,
       router: routerStub as unknown as Router,
+      cdr: cdrStub,
       selectedVehicleId: 'car-1',
       activeTab: 'history',
       isLoading: true,
@@ -58,6 +61,16 @@ describe('HomePage', () => {
     expect(component.selectedVehicle?.name).toBe('My car');
     expect(component.monthlyBalance).toBe(50);
     expect(component.monthlyFuelTotal).toBe(30);
+    expect(component.isLoading).toBe(false);
+    expect(cdrStub.detectChanges).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops loading and refreshes the view when initialization fails', async () => {
+    ledgerStub.initialize.mockRejectedValueOnce(new Error('boom'));
+    await component.ngOnInit();
+    expect(component.loadError).toContain('could not be loaded');
+    expect(component.isLoading).toBe(false);
+    expect(cdrStub.detectChanges).toHaveBeenCalledTimes(1);
   });
 
   it('creates an entry for the selected vehicle', async () => {

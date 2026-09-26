@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../auth.service';
 import { EntryKind, LedgerEntry, LedgerTab, Vehicle } from './ledger.models';
@@ -14,6 +14,7 @@ export class HomePage implements OnInit {
   public ledger = inject(LedgerService);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   readonly today = new Date();
   readonly entryKinds: Array<{ value: EntryKind; label: string; icon: string }> = [
@@ -55,6 +56,7 @@ export class HomePage implements OnInit {
       this.loadError = 'Your garage could not be loaded. Check your connection and sign in again.';
     } finally {
       this.isLoading = false;
+      this.cdr.detectChanges();
     }
   }
 
