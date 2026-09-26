@@ -9,7 +9,11 @@ import { AppComponent } from './app.component';
 
 describe('AppComponent', () => {
   let versionUpdates$: Subject<VersionEvent>;
-  let swUpdate: { activateUpdate: ReturnType<typeof vi.fn>; isEnabled: boolean; versionUpdates: ReturnType<Subject<VersionEvent>['asObservable']> };
+  let swUpdate: {
+    activateUpdate: ReturnType<typeof vi.fn>;
+    isEnabled: boolean;
+    versionUpdates: ReturnType<Subject<VersionEvent>['asObservable']>;
+  };
   let toastController: { create: ReturnType<typeof vi.fn> };
   let toast: {
     present: ReturnType<typeof vi.fn>;
@@ -23,7 +27,7 @@ describe('AppComponent', () => {
       onDidDismiss: vi.fn().mockResolvedValue(undefined),
     };
     swUpdate = {
-      activateUpdate: vi.fn().mockResolvedValue(undefined),
+      activateUpdate: vi.fn().mockResolvedValue(true),
       isEnabled: true,
       versionUpdates: versionUpdates$.asObservable(),
     };
@@ -94,5 +98,37 @@ describe('AppComponent', () => {
 
     expect(toastController.create).toHaveBeenCalledTimes(1);
     expect(swUpdate.activateUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries later when update activation does not complete', async () => {
+    swUpdate.activateUpdate.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const reloadSpy = vi.spyOn(app as AppComponent & { reloadPage: () => void }, 'reloadPage');
+    reloadSpy.mockImplementation(() => undefined);
+
+    versionUpdates$.next({
+      type: 'VERSION_READY',
+      currentVersion: { hash: 'current' },
+      latestVersion: { hash: 'latest' },
+    });
+
+    await fixture.whenStable();
+
+    expect(reloadSpy).not.toHaveBeenCalled();
+    expect(toastController.create).toHaveBeenCalledTimes(1);
+    expect(swUpdate.activateUpdate).toHaveBeenCalledTimes(1);
+
+    versionUpdates$.next({
+      type: 'VERSION_READY',
+      currentVersion: { hash: 'current-2' },
+      latestVersion: { hash: 'latest-2' },
+    });
+
+    await fixture.whenStable();
+
+    expect(toastController.create).toHaveBeenCalledTimes(2);
+    expect(swUpdate.activateUpdate).toHaveBeenCalledTimes(2);
+    expect(reloadSpy).toHaveBeenCalledTimes(1);
   });
 });

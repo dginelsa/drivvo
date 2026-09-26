@@ -49,7 +49,13 @@ export class AppComponent {
 
       await toast.present();
       await toast.onDidDismiss();
-      await this.swUpdate.activateUpdate();
+
+      const updateActivated = await this.swUpdate.activateUpdate();
+      if (!updateActivated) {
+        this.updatePendingRefresh = false;
+        return;
+      }
+
       this.reloadPage();
     } catch {
       this.updatePendingRefresh = false;
