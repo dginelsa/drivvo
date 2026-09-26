@@ -54,13 +54,14 @@ try {
     $sessionTtl = max(0, (int) ($config['session_ttl_seconds'] ?? 31536000));
     $sessionSavePath = trim((string) ($config['session_save_path'] ?? ''));
     if ($sessionSavePath !== '') {
-        if (!is_dir($sessionSavePath) && !mkdir($sessionSavePath, 0700, true) && !is_dir($sessionSavePath)) {
+        $resolvedPath = realpath($sessionSavePath);
+        if ($resolvedPath === false || !is_dir($resolvedPath)) {
             throw new RuntimeException('Session storage path is not available.');
         }
-        if (!is_writable($sessionSavePath)) {
+        if (!is_writable($resolvedPath)) {
             throw new RuntimeException('Session storage path is not writable.');
         }
-        ini_set('session.save_path', $sessionSavePath);
+        ini_set('session.save_path', $resolvedPath);
     }
     session_set_cookie_params([
         'lifetime' => $sessionTtl,
@@ -71,6 +72,7 @@ try {
     ]);
     if ($sessionTtl > 0) {
         ini_set('session.gc_maxlifetime', (string) $sessionTtl);
+        ini_set('session.cookie_lifetime', (string) $sessionTtl);
     }
     ini_set('session.use_strict_mode', '1');
     ini_set('session.use_only_cookies', '1');
