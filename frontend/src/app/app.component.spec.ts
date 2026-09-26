@@ -3,25 +3,27 @@ import { TestBed } from '@angular/core/testing';
 import { SwUpdate, VersionEvent } from '@angular/service-worker';
 import { ToastController } from '@ionic/angular';
 import { Subject } from 'rxjs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppComponent } from './app.component';
 
 describe('AppComponent', () => {
   let versionUpdates$: Subject<VersionEvent>;
-  let toastController: jasmine.SpyObj<ToastController>;
+  let toastController: { create: ReturnType<typeof vi.fn> };
   let toast: {
-    present: jasmine.Spy<() => Promise<void>>;
-    onDidDismiss: jasmine.Spy<() => Promise<void>>;
+    present: ReturnType<typeof vi.fn>;
+    onDidDismiss: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
     versionUpdates$ = new Subject<VersionEvent>();
     toast = {
-      present: jasmine.createSpy('present').and.resolveTo(),
-      onDidDismiss: jasmine.createSpy('onDidDismiss').and.resolveTo(),
+      present: vi.fn().mockResolvedValue(undefined),
+      onDidDismiss: vi.fn().mockResolvedValue(undefined),
     };
-    toastController = jasmine.createSpyObj<ToastController>('ToastController', ['create']);
-    toastController.create.and.resolveTo(toast as never);
+    toastController = {
+      create: vi.fn().mockResolvedValue(toast),
+    };
 
     await TestBed.configureTestingModule({
       declarations: [AppComponent],
@@ -48,7 +50,7 @@ describe('AppComponent', () => {
   it('notifies the user and refreshes when an update is ready', async () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    const reloadSpy = spyOn<any>(app, 'reloadPage').and.stub();
+    const reloadSpy = vi.spyOn(app as never, 'reloadPage').mockImplementation(() => undefined);
 
     versionUpdates$.next({
       type: 'VERSION_READY',
@@ -59,7 +61,7 @@ describe('AppComponent', () => {
     await fixture.whenStable();
 
     expect(toastController.create).toHaveBeenCalledWith(
-      jasmine.objectContaining({
+      expect.objectContaining({
         message: 'App updated. Refreshing…',
         duration: 2000,
         position: 'top',
