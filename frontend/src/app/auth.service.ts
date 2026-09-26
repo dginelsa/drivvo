@@ -6,9 +6,10 @@ const SESSION_KEY = 'drivvo.session';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private api = inject(ApiClient);
+  private readonly storage = typeof localStorage !== 'undefined' ? localStorage : null;
 
   get isAuthenticated(): boolean {
-    return typeof sessionStorage !== 'undefined' && sessionStorage.getItem(SESSION_KEY) === 'active';
+    return this.storage?.getItem(SESSION_KEY) === 'active';
   }
 
   get apiEnabled(): boolean { return this.api.enabled; }
@@ -17,7 +18,7 @@ export class AuthService {
     if (!this.api.enabled) return this.isAuthenticated;
     try {
       await this.api.get('/auth/me');
-      sessionStorage.setItem(SESSION_KEY, 'active');
+      this.storage?.setItem(SESSION_KEY, 'active');
       return true;
     } catch {
       this.clearSession();
@@ -27,12 +28,12 @@ export class AuthService {
 
   async login(email: string, password: string): Promise<void> {
     await this.api.post('/auth/login', { email, password });
-    sessionStorage.setItem(SESSION_KEY, 'active');
+    this.storage?.setItem(SESSION_KEY, 'active');
   }
 
   async register(email: string, password: string): Promise<void> {
     await this.api.post('/auth/register', { email, password });
-    sessionStorage.setItem(SESSION_KEY, 'active');
+    this.storage?.setItem(SESSION_KEY, 'active');
   }
 
   async logout(): Promise<void> {
@@ -41,10 +42,10 @@ export class AuthService {
   }
 
   enterDemo(): void {
-    sessionStorage.setItem(SESSION_KEY, 'active');
+    this.storage?.setItem(SESSION_KEY, 'active');
   }
 
   clearSession(): void {
-    sessionStorage.removeItem(SESSION_KEY);
+    this.storage?.removeItem(SESSION_KEY);
   }
 }
