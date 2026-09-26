@@ -7,6 +7,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppComponent } from './app.component';
 
+const flushAsyncWork = async (): Promise<void> => {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+};
+
 describe('AppComponent', () => {
   let versionUpdates$: Subject<VersionEvent>;
   let swUpdate: {
@@ -114,7 +118,7 @@ describe('AppComponent', () => {
     });
 
     await fixture.whenStable();
-    await Promise.resolve();
+    await flushAsyncWork();
 
     expect(reloadSpy).not.toHaveBeenCalled();
     expect(toastController.create).toHaveBeenCalledTimes(1);
@@ -127,7 +131,7 @@ describe('AppComponent', () => {
     });
 
     await fixture.whenStable();
-    await Promise.resolve();
+    await flushAsyncWork();
 
     expect(toastController.create).toHaveBeenCalledTimes(2);
     expect(swUpdate.activateUpdate).toHaveBeenCalledTimes(2);
