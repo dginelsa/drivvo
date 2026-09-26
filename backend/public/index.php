@@ -50,6 +50,11 @@ if ($path === '/api/v1/health') {
 
 try {
     $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    $setIni = static function (string $key, string $value): void {
+        if (ini_set($key, $value) === false) {
+            throw new RuntimeException(sprintf('Could not apply required PHP setting: %s.', $key));
+        }
+    };
     session_name($config['session_name']);
     $sessionTtl = max(1, (int) ($config['session_ttl_seconds'] ?? 31536000));
     $sessionSavePath = trim((string) ($config['session_save_path'] ?? ''));
@@ -61,7 +66,7 @@ try {
         if (!is_writable($resolvedPath)) {
             throw new RuntimeException('Session storage path is not writable.');
         }
-        ini_set('session.save_path', $resolvedPath);
+        $setIni('session.save_path', $resolvedPath);
     }
     session_set_cookie_params([
         'lifetime' => $sessionTtl,
@@ -70,10 +75,10 @@ try {
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
-    ini_set('session.gc_maxlifetime', (string) $sessionTtl);
-    ini_set('session.cookie_lifetime', (string) $sessionTtl);
-    ini_set('session.use_strict_mode', '1');
-    ini_set('session.use_only_cookies', '1');
+    $setIni('session.gc_maxlifetime', (string) $sessionTtl);
+    $setIni('session.cookie_lifetime', (string) $sessionTtl);
+    $setIni('session.use_strict_mode', '1');
+    $setIni('session.use_only_cookies', '1');
     session_start();
 
     if ($path === '/api/v1/auth/csrf' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {

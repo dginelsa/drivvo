@@ -6,11 +6,13 @@ const SESSION_KEY = 'drivvo.session';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private api = inject(ApiClient);
-  private readonly storage = typeof localStorage !== 'undefined' ? localStorage : null;
+  private readonly storage = this.resolveStorage();
 
   get isAuthenticated(): boolean {
     return this.storage?.getItem(SESSION_KEY) === 'active';
   }
+
+  get canPersistSession(): boolean { return this.storage !== null; }
 
   get apiEnabled(): boolean { return this.api.enabled; }
 
@@ -47,5 +49,11 @@ export class AuthService {
 
   clearSession(): void {
     this.storage?.removeItem(SESSION_KEY);
+  }
+
+  private resolveStorage(): Storage | null {
+    if (typeof localStorage !== 'undefined') return localStorage;
+    if (typeof sessionStorage !== 'undefined') return sessionStorage;
+    return null;
   }
 }
