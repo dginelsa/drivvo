@@ -73,4 +73,26 @@ describe('AppComponent', () => {
     expect(swUpdate.activateUpdate).toHaveBeenCalled();
     expect(reloadSpy).toHaveBeenCalled();
   });
+
+  it('ignores later update-ready events after the refresh flow starts', async () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    vi.spyOn(app as AppComponent & { reloadPage: () => void }, 'reloadPage').mockImplementation(() => undefined);
+
+    versionUpdates$.next({
+      type: 'VERSION_READY',
+      currentVersion: { hash: 'current' },
+      latestVersion: { hash: 'latest' },
+    });
+    versionUpdates$.next({
+      type: 'VERSION_READY',
+      currentVersion: { hash: 'current-2' },
+      latestVersion: { hash: 'latest-2' },
+    });
+
+    await fixture.whenStable();
+
+    expect(toastController.create).toHaveBeenCalledTimes(1);
+    expect(swUpdate.activateUpdate).toHaveBeenCalledTimes(1);
+  });
 });

@@ -40,16 +40,20 @@ export class AppComponent {
 
     this.updatePendingRefresh = true;
 
-    const toast = await this.toastController.create({
-      message: 'App updated. Refreshing…',
-      duration: 2000,
-      position: 'top',
-    });
+    try {
+      const toast = await this.toastController.create({
+        message: 'App updated. Refreshing…',
+        duration: 2000,
+        position: 'top',
+      });
 
-    await toast.present();
-    await toast.onDidDismiss();
-    await this.swUpdate.activateUpdate();
-    this.reloadPage();
+      await toast.present();
+      await toast.onDidDismiss();
+      await this.swUpdate.activateUpdate();
+      this.reloadPage();
+    } catch {
+      this.updatePendingRefresh = false;
+    }
   }
 
   protected reloadPage(): void {
