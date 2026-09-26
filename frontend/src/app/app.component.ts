@@ -57,8 +57,9 @@ export class AppComponent {
       }
 
       this.reloadPage();
-    } catch {
+    } catch (error) {
       this.updatePendingRefresh = false;
+      console.error('App update refresh failed.', error);
     }
   }
 
