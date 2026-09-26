@@ -114,6 +114,7 @@ describe('AppComponent', () => {
     });
 
     await fixture.whenStable();
+    await Promise.resolve();
 
     expect(reloadSpy).not.toHaveBeenCalled();
     expect(toastController.create).toHaveBeenCalledTimes(1);
@@ -126,6 +127,7 @@ describe('AppComponent', () => {
     });
 
     await fixture.whenStable();
+    await Promise.resolve();
 
     expect(toastController.create).toHaveBeenCalledTimes(2);
     expect(swUpdate.activateUpdate).toHaveBeenCalledTimes(2);
