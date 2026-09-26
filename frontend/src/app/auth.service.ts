@@ -52,8 +52,19 @@ export class AuthService {
   }
 
   private resolveStorage(): Storage | null {
-    if (typeof localStorage !== 'undefined') return localStorage;
-    if (typeof sessionStorage !== 'undefined') return sessionStorage;
+    const candidates: Storage[] = [];
+    if (typeof localStorage !== 'undefined') candidates.push(localStorage);
+    if (typeof sessionStorage !== 'undefined') candidates.push(sessionStorage);
+    for (const candidate of candidates) {
+      try {
+        const probeKey = `${SESSION_KEY}.probe`;
+        candidate.setItem(probeKey, '1');
+        candidate.removeItem(probeKey);
+        return candidate;
+      } catch {
+        continue;
+      }
+    }
     return null;
   }
 }
