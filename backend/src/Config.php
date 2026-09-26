@@ -36,6 +36,8 @@ final class Config
             'db_password' => $dbPassword,
             'frontend_origin' => self::env('FRONTEND_ORIGIN', 'https://drivvo.dginelsa.net'),
             'session_name' => self::env('SESSION_NAME', 'drivvo_session'),
+            'session_ttl_seconds' => max(1, (int) self::env('SESSION_TTL_SECONDS', '31536000')),
+            'session_save_path' => self::env('SESSION_SAVE_PATH', ''),
         ];
     }
 
