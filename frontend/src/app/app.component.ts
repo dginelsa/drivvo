@@ -52,8 +52,7 @@ export class AppComponent {
 
       const updateActivated = await this.swUpdate.activateUpdate();
       if (!updateActivated) {
-        this.updatePendingRefresh = false;
-        return;
+        console.warn('App update activation returned false before refresh.');
       }
 
       this.reloadPage();

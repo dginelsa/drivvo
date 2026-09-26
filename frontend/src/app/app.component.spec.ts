@@ -82,6 +82,25 @@ describe('AppComponent', () => {
     expect(reloadSpy).toHaveBeenCalled();
   });
 
+  it('still refreshes if activation reports false', async () => {
+    swUpdate.activateUpdate.mockResolvedValueOnce(false);
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const reloadSpy = vi.spyOn(app as AppComponent & { reloadPage: () => void }, 'reloadPage');
+    reloadSpy.mockImplementation(() => undefined);
+
+    versionUpdates$.next({
+      type: 'VERSION_READY',
+      currentVersion: { hash: 'current' },
+      latestVersion: { hash: 'latest' },
+    });
+
+    await fixture.whenStable();
+
+    expect(swUpdate.activateUpdate).toHaveBeenCalledTimes(1);
+    expect(reloadSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('ignores later update-ready events after the refresh flow starts', async () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
@@ -104,8 +123,8 @@ describe('AppComponent', () => {
     expect(swUpdate.activateUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it('retries later when update activation does not complete', async () => {
-    swUpdate.activateUpdate.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  it('retries later when update activation throws', async () => {
+    swUpdate.activateUpdate.mockRejectedValueOnce(new Error('activation failed')).mockResolvedValueOnce(true);
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
     const reloadSpy = vi.spyOn(app as AppComponent & { reloadPage: () => void }, 'reloadPage');
