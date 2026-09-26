@@ -37,6 +37,7 @@ final class Config
             'frontend_origin' => self::env('FRONTEND_ORIGIN', 'https://drivvo.dginelsa.net'),
             'session_name' => self::env('SESSION_NAME', 'drivvo_session'),
             'session_ttl_seconds' => max(3600, (int) self::env('SESSION_TTL_SECONDS', '31536000')),
+            'session_save_path' => self::env('SESSION_SAVE_PATH', ''),
         ];
     }
 
